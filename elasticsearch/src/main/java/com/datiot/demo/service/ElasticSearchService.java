@@ -50,4 +50,13 @@ public class ElasticSearchService {
         });
     }
 
+    public String runQuery(NativeSearchQuery query) {
+        return elasticsearchTemplate.query(query, new ResultsExtractor<String>() {
+            @Override
+            public String extract(SearchResponse response) {
+                return response.toString();
+            }
+        });
+    }
+
 }

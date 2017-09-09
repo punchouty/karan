@@ -14,15 +14,13 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
-import org.elasticsearch.search.aggregations.bucket.histogram.Histogram;
-import org.elasticsearch.search.aggregations.metrics.avg.Avg;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
@@ -257,17 +255,19 @@ public class CandidateDataService {
         return candidateMap;
     }
 
-    public void getAverage(Integer year) {
+    public String getAverageAssetPerConstituency(Integer year) {
         NativeSearchQuery aggregationQuery = new NativeSearchQueryBuilder()
                 .withIndices(elasticSearchService.getIndexName(Candidate.class))
                 .withTypes(elasticSearchService.getIndexType(Candidate.class))
+                .withPageable(new PageRequest(0, 1))
                 .withQuery(boolQuery()
                         .must(QueryBuilders.termQuery("year", year)))
                 .addAggregation(AggregationBuilders.terms("constituencyId").field("constituencyId")
+                        .order(Terms.Order.aggregation("avgAsset", false))
+                        .size(60)
                         .subAggregation(AggregationBuilders.avg("avgAsset").field("asset"))
                 )
                 .build();
-        Aggregations aggregations = elasticSearchService.runAggregationQuery(aggregationQuery);
-        System.out.println(aggregations);
+        return elasticSearchService.runQuery(aggregationQuery);
     }
 }

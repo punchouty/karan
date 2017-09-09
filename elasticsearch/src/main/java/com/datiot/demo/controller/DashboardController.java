@@ -15,9 +15,8 @@ public class DashboardController {
     @Autowired
     private CandidateDataService candidateDataService;
 
-    @RequestMapping(value = "candidateAverageAsset/{year}/", method = RequestMethod.GET)
+    @RequestMapping(value = "candidateAverageAsset/{year}", method = RequestMethod.GET)
     public String getCandidateAverageAsset(@PathVariable Integer year) {
-        candidateDataService.getAverage(year);
-        return "";
+        return candidateDataService.getAverageAssetPerConstituency(year);
     }
 }
