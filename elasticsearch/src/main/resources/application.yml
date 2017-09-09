@@ -1,0 +1,10 @@
+spring:
+  data:
+    elasticsearch:
+      cluster-name: demo
+      properties:
+        http:
+          enabled: true
+demo:
+  excel-file-path: /Users/rohitarora/Downloads/Candidate_Cleaned_Data_Final.xlsx
+  json-file-path: /Users/rohitarora/Downloads/meghalaya.json
