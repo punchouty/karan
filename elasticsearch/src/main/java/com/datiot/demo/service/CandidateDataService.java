@@ -2,9 +2,7 @@ package com.datiot.demo.service;
 
 import com.datiot.demo.domain.Candidate;
 import com.datiot.demo.domain.CandidateKey;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.WordUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -15,8 +13,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,7 +26,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
@@ -38,18 +33,14 @@ import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 @Service
 public class CandidateDataService {
 
-    private static final Logger log = LoggerFactory.getLogger(CandidateDataService.class);
-
     @Value("${demo.excel-file-path}")
     private String excelFilePath;
-    @Value("${demo.json-file-path}")
-    private String jsonFilePath;
 
     @Autowired
     private ElasticSearchService elasticSearchService;
 
-    private Map<String, Integer> constituencyMap;
-
+    @Autowired
+    private ConstituencyIdCache constituencyIdCache;
 
     private Map<CandidateKey, Candidate> readFileUsingPOI() throws IOException {
         if (excelFilePath == null) {
@@ -66,36 +57,11 @@ public class CandidateDataService {
     }
 
     public void saveCandidateData() throws IOException {
-        initalizeConstituencyMap();
+        Map<String, Integer> constituencyMap = constituencyIdCache.getConstituencyMap();
         Map<CandidateKey, Candidate> candidateMap = readFileUsingPOI();
         for (Candidate candidate : candidateMap.values()) {
             candidate.setConstituencyId(constituencyMap.get(candidate.getConstituency()));
             elasticSearchService.saveDataInElasticSearch(candidate, Candidate.class);
-        }
-    }
-
-    private void initalizeConstituencyMap() {
-        if (constituencyMap == null || constituencyMap.entrySet().size() == 0) {
-            constituencyMap = new HashMap<>();
-            if (jsonFilePath == null || "".equals(jsonFilePath)) {
-                jsonFilePath = "/Users/rohitarora/Downloads/meghalaya.json";
-            }
-            try {
-                FileInputStream inputStream = new FileInputStream(new File(jsonFilePath));
-                String jsonString = IOUtils.toString(inputStream);
-                ObjectMapper mapper = new ObjectMapper();
-                Map data = mapper.readValue(jsonString, Map.class);
-                List<Map> dataList = ((List<Map>) ((Map) ((Map) data.get("objects")).get("meghalayap")).get("geometries"));
-                for (Map dataMap : dataList) {
-                    String name = (String) ((Map) (Map) dataMap.get("properties")).get("AC_NAME");
-                    Integer id = (Integer) ((Map) (Map) dataMap.get("properties")).get("AC_NO");
-                    name = name.replace("(ST)", "").trim();
-                    constituencyMap.put(name, id);
-                }
-
-            } catch (IOException e) {
-                log.error("Something went wrong while reading json: ", e);
-            }
         }
     }
 
